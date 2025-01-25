@@ -152,6 +152,7 @@ body {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .dns-type-select,
@@ -160,6 +161,33 @@ body {
   border: 1px solid #ddd;
   border-radius: 4px;
   flex: 1;
+}
+
+.dns-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.subdomain-input {
+  width: 150px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.dns-preview {
+  margin-top: 10px;
+  padding: 10px;
+  background: #e8f5e9;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.dns-preview.error {
+  background: #ffebee;
 }
 
 .user-avatar {

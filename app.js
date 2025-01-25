@@ -33,7 +33,7 @@ function Browser() {
       { url: 'hosting.websim', title: 'Code Hosting' }
     ];
 
-    // Get recent DNS record pages
+    // Include all DNS records in history, including subdomains
     const dnsPages = dnsRecords
       .filter(record => record.type === 'A')
       .map(record => ({
@@ -59,6 +59,7 @@ function Browser() {
     } else if (url === 'hosting.websim') {
       setCurrentPage('hosting');
     } else {
+      // Check both exact domain matches and subdomains
       const record = dnsRecords.find(r => r.domain === url);
       if (record) {
         setCurrentPage('custom');
@@ -151,6 +152,7 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
   const [tld, setTld] = React.useState('websim');
   const [selectedUser, setSelectedUser] = React.useState('');
   const [dnsType, setDnsType] = React.useState('A');
+  const [subdomain, setSubdomain] = React.useState('');
 
   const userDomains = domains.filter(d => d.username === room.party.client.username);
 
@@ -174,30 +176,53 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
     setNewDomain('');
   };
 
+  const getFullDomainForDNS = (baseDomain) => {
+    if (!subdomain) return baseDomain;
+    return `${subdomain}.${baseDomain}`;
+  };
+
+  const validateDNSRecord = (domain) => {
+    const fullDomain = getFullDomainForDNS(domain);
+    
+    // Check if record already exists
+    const existingRecord = dnsRecords.find(r => 
+      r.domain === fullDomain && 
+      r.type === dnsType
+    );
+
+    return {
+      isValid: true,
+      existingRecord,
+      fullDomain
+    };
+  };
+
   const addDnsRecord = async (domain) => {
     if (!selectedUser) {
       alert('Please select a user to point the domain to');
       return;
     }
 
-    // Check if DNS record already exists for this domain
-    if (dnsRecords.find(r => r.domain === domain)) {
+    const { isValid, existingRecord, fullDomain } = validateDNSRecord(domain);
+    
+    if (!isValid) return;
+
+    if (existingRecord) {
       const confirm = window.confirm('DNS record already exists. Do you want to update it?');
       if (!confirm) return;
-      
-      // Delete existing record
-      const existingRecord = dnsRecords.find(r => r.domain === domain);
       await room.collection('dns').delete(existingRecord.id);
     }
 
     await room.collection('dns').create({
-      domain,
+      domain: fullDomain,
       ip: selectedUser,
-      type: dnsType
+      type: dnsType,
+      subdomain: subdomain || null
     });
     
     setSelectedUser('');
     setDnsType('A');
+    setSubdomain('');
   };
 
   return (
@@ -223,6 +248,14 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
       <h3>DNS Management</h3>
       <div className="dns-management">
         <div className="dns-controls">
+          <input
+            type="text"
+            value={subdomain}
+            onChange={(e) => setSubdomain(e.target.value)}
+            placeholder="Subdomain (optional)"
+            className="subdomain-input"
+          />
+          
           <select 
             value={dnsType} 
             onChange={(e) => setDnsType(e.target.value)}
@@ -276,10 +309,12 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
           <div className="dns-records">
             <h4>DNS Records</h4>
             {dnsRecords
-              .filter(r => r.domain === domain.domain)
+              .filter(r => r.domain.endsWith(domain.domain))
               .map(record => (
                 <div key={record.id} className="dns-record">
-                  <span className="record-type">Type: {record.type}</span>
+                  <span className="record-type">
+                    {record.type} Record: {record.domain}
+                  </span>
                   <span className="record-ip">Points to: {record.ip}</span>
                   <button 
                     onClick={() => room.collection('dns').delete(record.id)}
@@ -289,12 +324,19 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
                   </button>
                 </div>
               ))}
+            
+            {selectedUser && (
+              <div className="dns-preview">
+                Preview: {getFullDomainForDNS(domain.domain)} → {selectedUser}
+              </div>
+            )}
+
             <button 
               onClick={() => addDnsRecord(domain.domain)}
               disabled={!selectedUser}
               className="add-dns-record"
             >
-              Add DNS Record {selectedUser ? `-> ${selectedUser}` : ''}
+              Add DNS Record
             </button>
           </div>
         </div>
