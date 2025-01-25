@@ -26,15 +26,23 @@ function Browser() {
   );
 
   React.useEffect(() => {
-    if (history.length === 0) {
-      setHistory([
-        { url: 'godaddy.websim', title: 'GoDaddy' },
-        { url: 'namecheap.websim', title: 'Namecheap' },
-        { url: 'websim.ai', title: 'Websim' },
-        { url: 'hosting.websim', title: 'Code Hosting' }
-      ]);
-    }
-  }, []);
+    const mainTools = [
+      { url: 'godaddy.websim', title: 'GoDaddy Domain Registration' },
+      { url: 'namecheap.websim', title: 'Namecheap Domain Registration' },
+      { url: 'websim.ai', title: 'Websim' },
+      { url: 'hosting.websim', title: 'Code Hosting' }
+    ];
+
+    // Get recent DNS record pages
+    const dnsPages = dnsRecords
+      .filter(record => record.type === 'A')
+      .map(record => ({
+        url: record.domain,
+        title: `${record.domain} (→ ${record.ip})`
+      }));
+
+    setHistory([...mainTools, ...dnsPages]);
+  }, [dnsRecords]);
 
   const navigate = (url) => {
     setCurrentUrl(url);
@@ -100,18 +108,40 @@ function Browser() {
 }
 
 function History({ history, onNavigate }) {
+  const mainTools = history.slice(0, 4); // First 4 items are main tools
+  const recentPages = history.slice(4); // Rest are DNS record pages
+
   return (
     <div className="history">
-      <h2>Recent Pages</h2>
-      {history.map((item, i) => (
-        <div 
-          key={i} 
-          className="history-item"
-          onClick={() => onNavigate(item.url)}
-        >
-          {item.title}
-        </div>
-      ))}
+      <h2>Main Tools</h2>
+      <div className="history-section">
+        {mainTools.map((item, i) => (
+          <div 
+            key={i} 
+            className="history-item main-tool"
+            onClick={() => onNavigate(item.url)}
+          >
+            {item.title}
+          </div>
+        ))}
+      </div>
+
+      <h2>Recent DNS Pages</h2>
+      <div className="history-section">
+        {recentPages.length > 0 ? (
+          recentPages.map((item, i) => (
+            <div 
+              key={i} 
+              className="history-item dns-page"
+              onClick={() => onNavigate(item.url)}
+            >
+              {item.title}
+            </div>
+          ))
+        ) : (
+          <div className="no-records">No DNS records set up yet</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -121,7 +151,6 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
   const [tld, setTld] = React.useState('websim');
   const [selectedUser, setSelectedUser] = React.useState('');
   const [dnsType, setDnsType] = React.useState('A');
-  const [subdomain, setSubdomain] = React.useState('');
 
   const userDomains = domains.filter(d => d.username === room.party.client.username);
 
@@ -145,39 +174,30 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
     setNewDomain('');
   };
 
-  const getFullDomainName = (baseDomain, sub) => {
-    if (sub === '@' || !sub) return baseDomain;
-    return `${sub}.${baseDomain}`;
-  };
-
   const addDnsRecord = async (domain) => {
     if (!selectedUser) {
       alert('Please select a user to point the domain to');
       return;
     }
 
-    const fullDomain = getFullDomainName(domain, subdomain);
-
     // Check if DNS record already exists for this domain
-    const existingRecord = dnsRecords.find(r => r.domain === fullDomain);
-    
-    if (existingRecord) {
+    if (dnsRecords.find(r => r.domain === domain)) {
       const confirm = window.confirm('DNS record already exists. Do you want to update it?');
       if (!confirm) return;
+      
+      // Delete existing record
+      const existingRecord = dnsRecords.find(r => r.domain === domain);
       await room.collection('dns').delete(existingRecord.id);
     }
 
     await room.collection('dns').create({
-      domain: fullDomain,
-      baseDomain: domain,
-      subdomain: subdomain || '@',
+      domain,
       ip: selectedUser,
       type: dnsType
     });
     
     setSelectedUser('');
     setDnsType('A');
-    setSubdomain('');
   };
 
   return (
@@ -203,46 +223,29 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
       <h3>DNS Management</h3>
       <div className="dns-management">
         <div className="dns-controls">
-          <div className="dns-form-group">
-            <label className="dns-form-label">Record:</label>
-            <input
-              type="text"
-              className="subdomain-input"
-              value={subdomain}
-              onChange={(e) => setSubdomain(e.target.value)}
-              placeholder="subdomain or @"
-            />
-          </div>
+          <select 
+            value={dnsType} 
+            onChange={(e) => setDnsType(e.target.value)}
+            className="dns-type-select"
+          >
+            <option value="A">A Record</option>
+            <option value="CNAME">CNAME Record</option>
+            <option value="MX">MX Record</option>
+            <option value="TXT">TXT Record</option>
+          </select>
           
-          <div className="dns-form-group">
-            <label className="dns-form-label">Type:</label>
-            <select 
-              value={dnsType} 
-              onChange={(e) => setDnsType(e.target.value)}
-              className="dns-type-select"
-            >
-              <option value="A">A Record</option>
-              <option value="CNAME">CNAME Record</option>
-              <option value="MX">MX Record</option>
-              <option value="TXT">TXT Record</option>
-            </select>
-          </div>
-          
-          <div className="dns-form-group">
-            <label className="dns-form-label">Points to:</label>
-            <select 
-              value={selectedUser} 
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="user-select"
-            >
-              <option value="">Select User IP</option>
-              {Object.entries(peers).map(([id, peer]) => (
-                <option key={id} value={peer.username}>
-                  {peer.username}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select 
+            value={selectedUser} 
+            onChange={(e) => setSelectedUser(e.target.value)}
+            className="user-select"
+          >
+            <option value="">Select User IP</option>
+            {Object.entries(peers).map(([id, peer]) => (
+              <option key={id} value={peer.username}>
+                {peer.username}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="user-list">
@@ -272,39 +275,20 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
           <p className="domain-name">{domain.domain}</p>
           <div className="dns-records">
             <h4>DNS Records</h4>
-            <table className="dns-records-table">
-              <thead>
-                <tr>
-                  <th>Record</th>
-                  <th>Type</th>
-                  <th>Points to</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dnsRecords
-                  .filter(r => r.baseDomain === domain.domain)
-                  .map(record => (
-                    <tr key={record.id}>
-                      <td>
-                        <span className="dns-record-subdomain">{record.subdomain}</span>
-                        <br />
-                        <span className="dns-record-full">{record.domain}</span>
-                      </td>
-                      <td>{record.type}</td>
-                      <td>{record.ip}</td>
-                      <td>
-                        <button 
-                          onClick={() => room.collection('dns').delete(record.id)}
-                          className="delete-record"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            {dnsRecords
+              .filter(r => r.domain === domain.domain)
+              .map(record => (
+                <div key={record.id} className="dns-record">
+                  <span className="record-type">Type: {record.type}</span>
+                  <span className="record-ip">Points to: {record.ip}</span>
+                  <button 
+                    onClick={() => room.collection('dns').delete(record.id)}
+                    className="delete-record"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
             <button 
               onClick={() => addDnsRecord(domain.domain)}
               disabled={!selectedUser}

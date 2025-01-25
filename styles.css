@@ -33,16 +33,25 @@ body {
   padding: 20px;
 }
 
+.history h2 {
+  color: #333;
+  margin: 20px 0 15px 0;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #eee;
+}
+
 .history-item {
   cursor: pointer;
   padding: 10px;
   margin: 5px 0;
   background: #f8f8f8;
   border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .history-item:hover {
   background: #eee;
+  transform: translateX(5px);
 }
 
 .browser-frame {
@@ -212,52 +221,22 @@ body {
   cursor: not-allowed;
 }
 
-.subdomain-input {
-  padding: 5px;
-  margin-right: 10px;
-  width: 120px;
+.history-section {
+  margin-bottom: 30px;
 }
 
-.at-symbol {
-  font-size: 1.2em;
-  margin: 0 5px;
+.main-tool {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
 }
 
-.dns-form-group {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
+.dns-page {
+  background: #f1f8e9;
+  border-left: 4px solid #4caf50;
 }
 
-.dns-form-label {
-  margin-right: 10px;
-  min-width: 80px;
-}
-
-.dns-records-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-.dns-records-table th,
-.dns-records-table td {
-  padding: 8px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.dns-records-table th {
-  background-color: #f5f5f5;
-  font-weight: bold;
-}
-
-.dns-record-subdomain {
+.no-records {
   color: #666;
-  font-family: monospace;
-}
-
-.dns-record-full {
-  color: #0066cc;
-  font-family: monospace;
+  font-style: italic;
+  padding: 10px;
 }
