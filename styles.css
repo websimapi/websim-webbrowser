@@ -1,0 +1,76 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+.browser {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.address-bar {
+  display: flex;
+  padding: 10px;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+}
+
+.address-bar input {
+  flex: 1;
+  padding: 5px;
+  margin: 0 10px;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.history {
+  padding: 20px;
+}
+
+.history-item {
+  cursor: pointer;
+  padding: 10px;
+  margin: 5px 0;
+  background: #f8f8f8;
+  border-radius: 4px;
+}
+
+.history-item:hover {
+  background: #eee;
+}
+
+.browser-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
+}
+
+.registrar {
+  padding: 20px;
+}
+
+.domain-form {
+  margin: 20px 0;
+}
+
+.domain-form input,
+.domain-form select {
+  margin: 0 10px;
+  padding: 5px;
+}
+
+.dns-records {
+  margin-top: 20px;
+}
+
+.dns-record {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
