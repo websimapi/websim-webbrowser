@@ -36,8 +36,14 @@ function Browser() {
     const dnsPages = dnsRecords
       .filter(record => {
         const domainParts = record.domain.split('.');
-        const parentDomain = domainParts.slice(-2).join('.');
-        return domains.some(d => d.domain === parentDomain);
+        while (domainParts.length > 1) {
+          const testDomain = domainParts.join('.');
+          if (domains.some(d => d.domain === testDomain)) {
+            return true;
+          }
+          domainParts.shift(); 
+        }
+        return false;
       })
       .map(record => ({
         url: record.domain,
@@ -157,8 +163,17 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
 
   const getDomainDnsRecords = (domainName) => {
     return dnsRecords.filter(record => {
-      const recordDomain = record.domain;
-      return recordDomain === domainName || recordDomain.endsWith(`.${domainName}`);
+      const recordParts = record.domain.split('.');
+      const domainParts = domainName.split('.');
+      
+      while (recordParts.length >= domainParts.length) {
+        const testDomain = recordParts.slice(-domainParts.length).join('.');
+        if (testDomain === domainName) {
+          return true;
+        }
+        recordParts.shift();
+      }
+      return false;
     });
   };
 
@@ -256,26 +271,30 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
           <p className="domain-name">{domain.domain}</p>
           <div className="dns-records">
             <h4>DNS Records</h4>
-            {getDomainDnsRecords(domain.domain).length > 0 ? (
-              getDomainDnsRecords(domain.domain).map(record => (
-                <div key={record.id} className="dns-record">
-                  <span className="record-type">
-                    {record.type} Record: {record.domain}
-                  </span>
-                  <span className="record-ip">→ {record.ip}</span>
-                  {record.username === room.party.client.username && (
-                    <button 
-                      onClick={() => room.collection('dns').delete(record.id)}
-                      className="delete-record"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="no-records">No DNS records set up for this domain</div>
-            )}
+            {(() => {
+              const records = getDomainDnsRecords(domain.domain);
+              return records.length > 0 ? (
+                records.map(record => (
+                  <div key={record.id} className="dns-record">
+                    <span className="record-type">
+                      {record.type} Record: {record.domain}
+                      {record.subdomain && ` (subdomain: ${record.subdomain})`}
+                    </span>
+                    <span className="record-ip">→ {record.ip}</span>
+                    {record.username === room.party.client.username && (
+                      <button 
+                        onClick={() => room.collection('dns').delete(record.id)}
+                        className="delete-record"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="no-records">No DNS records set up for this domain</div>
+              );
+            })()}
 
             <div className="dns-management">
               <div className="dns-controls">
