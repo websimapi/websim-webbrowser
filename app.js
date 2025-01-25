@@ -35,8 +35,9 @@ function Browser() {
 
     const dnsPages = dnsRecords
       .filter(record => {
-        const baseDomain = record.domain.split('.').slice(-2).join('.');
-        return domains.some(d => d.domain === baseDomain);
+        const domainParts = record.domain.split('.');
+        const parentDomain = domainParts.slice(-2).join('.');
+        return domains.some(d => d.domain === parentDomain);
       })
       .map(record => ({
         url: record.domain,
@@ -48,10 +49,7 @@ function Browser() {
 
   const navigate = (url) => {
     setCurrentUrl(url);
-    if (!history.find(h => h.url === url)) {
-      setHistory([{ url, title: url }, ...history].slice(0, 10));
-    }
-
+    
     if (url === 'godaddy.websim') {
       setCurrentPage('godaddy');
     } else if (url === 'namecheap.websim') {
@@ -111,7 +109,7 @@ function Browser() {
 
 function History({ history, onNavigate }) {
   const mainTools = history.slice(0, 4); 
-  const recentPages = history.slice(4); 
+  const dnsPages = history.slice(4); 
 
   return (
     <div className="history">
@@ -130,8 +128,8 @@ function History({ history, onNavigate }) {
 
       <h2>Recent DNS Pages</h2>
       <div className="history-section">
-        {recentPages.length > 0 ? (
-          recentPages.map((item, i) => (
+        {dnsPages.length > 0 ? (
+          dnsPages.map((item, i) => (
             <div 
               key={i} 
               className="history-item dns-page"
@@ -141,7 +139,7 @@ function History({ history, onNavigate }) {
             </div>
           ))
         ) : (
-          <div className="no-records">No DNS records set up yet</div>
+          <div className="no-records">No DNS pages available yet</div>
         )}
       </div>
     </div>
@@ -159,8 +157,8 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
 
   const getDomainDnsRecords = (domainName) => {
     return dnsRecords.filter(record => {
-      return record.domain === domainName || 
-             (record.subdomain && record.domain.endsWith(`.${domainName}`));
+      const recordDomain = record.domain;
+      return recordDomain === domainName || recordDomain.endsWith(`.${domainName}`);
     });
   };
 
@@ -258,24 +256,27 @@ function Registrar({ provider, domains, dnsRecords, peers }) {
           <p className="domain-name">{domain.domain}</p>
           <div className="dns-records">
             <h4>DNS Records</h4>
-            {getDomainDnsRecords(domain.domain).map(record => (
-              <div key={record.id} className="dns-record">
-                <span className="record-type">
-                  {record.type} Record: {record.domain}
-                  {record.subdomain && ` (subdomain: ${record.subdomain})`}
-                </span>
-                <span className="record-ip">Points to: {record.ip}</span>
-                {record.username === room.party.client.username && (
-                  <button 
-                    onClick={() => room.collection('dns').delete(record.id)}
-                    className="delete-record"
-                  >
-                    Delete
-                  </button>
-                )}
-              </div>
-            ))}
-            
+            {getDomainDnsRecords(domain.domain).length > 0 ? (
+              getDomainDnsRecords(domain.domain).map(record => (
+                <div key={record.id} className="dns-record">
+                  <span className="record-type">
+                    {record.type} Record: {record.domain}
+                  </span>
+                  <span className="record-ip">→ {record.ip}</span>
+                  {record.username === room.party.client.username && (
+                    <button 
+                      onClick={() => room.collection('dns').delete(record.id)}
+                      className="delete-record"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="no-records">No DNS records set up for this domain</div>
+            )}
+
             <div className="dns-management">
               <div className="dns-controls">
                 <input
